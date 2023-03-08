@@ -47,10 +47,10 @@ def configure_runtime(org_root, run=subprocess.run):
     with open("/etc/bash.bashrc", "a+") as fpout:
         fpout.write(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}")
     hdj, kernels = map(os.fspath, [homedir_jupyter(org_root), org_root / "venv" / "jupyter" / "share" / "jupyter" / "kernels"])
-    run(["useradd", "--uid", "1000", "--homedir", hdj], check=True)
+    run(["useradd", "developer", "--uid", "1000", "--home-dir", hdj], check=True)
     run(["chown", "-R", "developer", hdj, kernels], check=True)
     run(["apt-get", "update"], check=True)
-    run(["apt-get", "install", "texlive-latex-recommended", "texlive-latex-extra", "texlive-xetex", "poppler-utils", "nvi", "pandoc"])
+    run(["apt-get", "install", "-y", "texlive-latex-recommended", "texlive-latex-extra", "texlive-xetex", "poppler-utils", "nvi", "pandoc"])
 
 
 def configure_buildtime(org_root: pathlib.Path) -> None:
@@ -59,11 +59,20 @@ def configure_buildtime(org_root: pathlib.Path) -> None:
     ncolonize_jupyter(org_root)
 
     
+def ncolony(org_root: pathlib.Path) -> None:
+    python = os.fspath(org_root / "venv" / "jupyter" / "bin" / "python")
+    ncolony_root = org_root / "ncolony"
+    config, messages = map(os.fspath, [ncolony_root / part for part in ["config", "messages"]])
+    args = [python, "-m", "twisted", "ncolony", "--messages", messages, "--config", config]
+    os.execv(args[0], args)
+    
 def main(argv=sys.argv, env=os.environ, run=subprocess.run):
     org_root = pathlib.Path(env["ORG_ROOT"])
     if argv[1] == "buildtime":
         configure_buildtime(org_root)
-    elif argv[2] == "runtime":
+    elif argv[1] == "runtime":
         configure_runtime(org_root, run)
+    elif argv[1] == "ncolony":
+        ncolony(org_root)
     else:
         raise ValueError("unknown", argv[1])
