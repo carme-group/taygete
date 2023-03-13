@@ -1,12 +1,15 @@
-# TODO: starship stuff
-# https://github.com/starship/starship/releases/latest/download/
-#            starship-$(uname -m)-unknown-linux-musl.tar.gz
-# unpack into jupyter venv bin
+from __future__ import annotations
+
+import io
 import pathlib
 import os
 import subprocess
 import sys
 import textwrap
+import tarfile
+from typing import Callable
+
+import httpx
 
 from ncolony import ctllib
 
@@ -26,6 +29,26 @@ def write_jupyter_config(org_root: pathlib.Path) -> None:
     """
         )
     )
+
+
+def land_starship(org_root: pathlib.Path, *, client: httpx.Client, run) -> None:
+    base_url = "https://github.com/starship/starship/releases/latest/download/"
+    proc = run(["uname", "-m"], check=True, capture_output=True, text=True)
+    platform = proc.stdout.strip()
+    fname = f"starship-{platform}-unknown-linux-musl.tar.gz"
+    url = base_url + fname
+    res = client.get(url)
+    res.raise_for_status()
+    content = res.content
+    content_io = io.BytesIO(content)
+    content_tar = tarfile.open(fileobj=content_io)
+    [starship] = content_tar.getmembers()
+    starship_contents = content_tar.extractfile(starship)
+    starship_data = starship_contents.read()
+    starship_loc = org_root / "venv" / "jupyter" / "bin" / "starship"
+    starship_loc.parent.mkdir(exist_ok=True, parents=True)
+    starship_loc.write_bytes(starship_data)
+    starship_loc.chmod(0o755)
 
 
 def basic_directories(org_root: pathlib.Path) -> None:
@@ -91,10 +114,13 @@ def configure_runtime(org_root, run=subprocess.run):
     )
 
 
-def configure_buildtime(org_root: pathlib.Path) -> None:
+def configure_buildtime(
+    org_root: pathlib.Path, *, client: httpx.Client, run: Callable
+) -> None:
     write_jupyter_config(org_root)
     basic_directories(org_root)
     ncolonize_jupyter(org_root)
+    land_starship(org_root, client=client, run=run)
 
 
 def ncolony(org_root: pathlib.Path) -> None:
@@ -118,8 +144,9 @@ def ncolony(org_root: pathlib.Path) -> None:
 
 def main(argv=sys.argv, env=os.environ, run=subprocess.run):
     org_root = pathlib.Path(env["ORG_ROOT"])
+    client = httpx.Client(verify=env.get("VERIFY_CA", True), follow_redirects=True)
     if argv[1] == "buildtime":
-        configure_buildtime(org_root)
+        configure_buildtime(org_root, client=client, run=run)
     elif argv[1] == "runtime":
         configure_runtime(org_root, run)
     elif argv[1] == "ncolony":
