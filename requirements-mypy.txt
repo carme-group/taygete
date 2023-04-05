@@ -4,7 +4,6 @@
 #
 #    pip-compile --extra=mypy --output-file=requirements-mypy.txt --resolver=backtracking pyproject.toml
 #
---extra-index-url https://art.code.pan.run/artifactory/api/pypi/pypi-ep/simple
 
 aiofiles==22.1.0
     # via ypy-websocket
