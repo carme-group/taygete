@@ -7,7 +7,7 @@ import subprocess
 import sys
 import textwrap
 import tarfile
-from typing import Callable
+from typing import Callable, Sequence, Mapping
 
 import httpx
 
@@ -31,7 +31,23 @@ def write_jupyter_config(org_root: pathlib.Path) -> None:
     )
 
 
-def land_starship(org_root: pathlib.Path, *, client: httpx.Client, run) -> None:
+def configure_helm_build(org_root: pathlib.Path, *, client: httpx.Client, run: Callable) -> None:
+    raw_key = client.get("https://baltocdn.com/helm/signing.asc")
+    raw_key.raise_for_status()
+    content = res.content
+    res = run(["gpg", "--dearmor"], input=content, capture_output=True, check=True, text=False)
+    helm_dir = homedir_jupyter(org_root) / "helm"
+    helm_dir.create(parents=True, exist_ok=True)
+    keyring = helm_dir / "helm.gpg"
+    keywrite.write_bytes(res.stdout)
+    res = run(["dpkg", "--print-architecture"], capture_output=True, check=True, text=True)
+    architecture = res.stdout
+    deb_line = f"deb [arch={architecture} signed-by={os.fspath(keyring)}]  https://baltocdn.com/helm/stable/debian/ all main"
+    deb_file = helm_dir / "helm-stable-debian.list"
+    deb_file.write_text(deb_line)
+    
+
+def land_starship(org_root: pathlib.Path, *, client: httpx.Client, run: Callable) -> None:
     base_url = "https://github.com/starship/starship/releases/latest/download/"
     proc = run(["uname", "-m"], check=True, capture_output=True, text=True)
     platform = proc.stdout.strip()
@@ -58,7 +74,7 @@ def basic_directories(org_root: pathlib.Path) -> None:
     (hdj / ".ssh").chmod(0o700)
 
 
-def ncolonize_jupyter(org_root: pathlib.Path):
+def ncolonize_jupyter(org_root: pathlib.Path) -> None:
     ncolony_root = org_root / "ncolony"
     subdirs = config, messages = [
         ncolony_root / part for part in ["config", "messages"]
@@ -86,9 +102,17 @@ def ncolonize_jupyter(org_root: pathlib.Path):
     )
 
 
-def configure_runtime(org_root, run=subprocess.run):
+def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
     with open("/etc/profile.d/add-venv.sh", "w") as fpout:
-        fpout.write(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}")
+        print(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}", file=fpout)
+        print("export WORKON_HOME=~/venv", file=fpout)
+    with open("/etc/sudoers.d/developer", "a+") as fpout:
+        print("developer            ALL = (ALL) NOPASSWD: ALL", file=fpout)
+    run(["apt-get", "update"], check=True)
+    run(["apt-get", "install", "--yes", "apt-transport-https"], check=True)
+    helm_dir = homedir_jupyter(org_root) / "helm"
+    orig_file = helm_dir / "helm-stable-debian.list"
+    shutil.copy(orig_file, "/etc/apt/sources.list.d/")
     hdj, kernels = map(
         os.fspath,
         [
@@ -111,7 +135,9 @@ def configure_runtime(org_root, run=subprocess.run):
             "nvi",
             "pandoc",
             "sudo",
-        ]
+            "docker.io",
+            "kubernetes-client",
+        ], check=True,
     )
 
 
@@ -121,6 +147,7 @@ def configure_buildtime(
     write_jupyter_config(org_root)
     basic_directories(org_root)
     ncolonize_jupyter(org_root)
+    configure_helm_build(org_root, client=client, run=run)
     land_starship(org_root, client=client, run=run)
 
 
@@ -143,7 +170,7 @@ def ncolony(org_root: pathlib.Path) -> None:
     os.execv(args[0], args)
 
 
-def main(argv=sys.argv, env=os.environ, run=subprocess.run):
+def main(argv: Sequence[str]=sys.argv, env: Mapping[str, str]=os.environ, run: Callable=subprocess.run) -> None:
     org_root = pathlib.Path(env["ORG_ROOT"])
     client = httpx.Client(verify=env.get("VERIFY_CA", True), follow_redirects=True)
     if argv[1] == "buildtime":
