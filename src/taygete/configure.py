@@ -36,7 +36,7 @@ def configure_helm_build(
 ) -> None:
     raw_key = client.get("https://baltocdn.com/helm/signing.asc")
     raw_key.raise_for_status()
-    content = res.content
+    content = raw_key.content
     res = run(
         ["gpg", "--dearmor"], input=content, capture_output=True, check=True, text=False
     )
