@@ -9,6 +9,7 @@ dynamic = ["version"]
 dependencies = ["ncolony", "gather==17.5.0", "pycus", "jupyterlab", "virtualenvwrapper", "httpx", "ipywidgets"]
 readme = "README.rst"
 authors = [{name = "Moshe Zadka", email = "moshez@zadka.club"}]
+requires-python = ">=3.10"
 
 [tool.autocalver]
 use = true
