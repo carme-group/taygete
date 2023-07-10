@@ -88,6 +88,7 @@ def refresh_deps(session):
     for deps in ["tests", "docs", "lint", "mypy", "runtime"]:
         session.run(
             "pip-compile",
+            "--verbose",
             "--extra",
             deps,
             "pyproject.toml",
