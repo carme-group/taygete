@@ -87,7 +87,7 @@ def ncolonize_jupyter(org_root: pathlib.Path):
 
 
 def configure_runtime(org_root, run=subprocess.run):
-    with open("/etc/bash.bashrc", "a+") as fpout:
+    with open("/etc/profile.d/add-venv.sh", "w") as fpout:
         fpout.write(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}")
     hdj, kernels = map(
         os.fspath,
@@ -110,6 +110,7 @@ def configure_runtime(org_root, run=subprocess.run):
             "poppler-utils",
             "nvi",
             "pandoc",
+            "sudo",
         ]
     )
 

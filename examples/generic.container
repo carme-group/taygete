@@ -10,14 +10,10 @@ FROM $BUILD_BASE as base
 ARG NAME
 ENV ORG_ROOT=/opt/$NAME
 
-RUN python -m venv $ORG_ROOT/venv/jupyter
+RUN python -m venv --system-site-packages $ORG_ROOT/venv/jupyter
 RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install --upgrade pip
 
-COPY requirements-runtime.txt /tmp
-RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install -r /tmp/requirements-runtime.txt
-
-COPY dist/*.whl /tmp
-RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install /tmp/*.whl
+RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install taygete
 RUN $ORG_ROOT/venv/jupyter/bin/python -m taygete buildtime
 
 ARG BUILD_BASE
