@@ -1,2 +1,2 @@
-Getting Started with kalyke
+Getting Started with taygete
 =====================================

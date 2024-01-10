@@ -1,5 +1,5 @@
 API Reference
 =============
 
-.. automodule:: kalyke
+.. automodule:: taygete
    :members:
