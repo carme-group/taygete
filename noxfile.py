@@ -6,7 +6,7 @@ import nox
 nox.options.envdir = "build/nox"
 nox.options.sessions = ["lint", "tests", "mypy", "docs", "build"]
 
-VERSIONS = ["3.11"]
+VERSIONS = ["3.12", "3.11"]
 
 
 @nox.session(python=VERSIONS)
@@ -88,6 +88,7 @@ def refresh_deps(session):
     for deps in ["tests", "docs", "lint", "mypy", "runtime"]:
         session.run(
             "pip-compile",
+            "--verbose",
             "--extra",
             deps,
             "pyproject.toml",

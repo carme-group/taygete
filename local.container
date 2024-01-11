@@ -1,0 +1,30 @@
+# Run with something like:
+# docker build --build-arg BUILD_BASE=python:3 --build-arg NAME=kalyke -t temp-taygete -f build/Dockerfile .
+# This allows configuring
+# * The base image, in case you need something specific.
+# * The "brand" name
+
+ARG BUILD_BASE
+ARG NAME
+FROM $BUILD_BASE as base
+ARG NAME
+ENV ORG_ROOT=/opt/$NAME
+
+RUN python -m venv --system-site-packages $ORG_ROOT/venv/jupyter
+RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install --upgrade pip
+
+RUN mkdir /src
+COPY requirements-runtime.txt /src
+RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install -r /src/requirements-runtime.txt
+COPY dist/*.whl /src
+RUN $ORG_ROOT/venv/jupyter/bin/python -m pip install /src/*.whl
+
+RUN $ORG_ROOT/venv/jupyter/bin/python -m taygete buildtime
+
+ARG BUILD_BASE
+FROM $BUILD_BASE as runtime
+ARG NAME
+ENV ORG_ROOT=/opt/$NAME
+COPY --from=base $ORG_ROOT $ORG_ROOT
+RUN $ORG_ROOT/venv/jupyter/bin/python -m taygete runtime
+ENTRYPOINT ["bash", "-c", "exec $ORG_ROOT/venv/jupyter/bin/python -m taygete ncolony"]
