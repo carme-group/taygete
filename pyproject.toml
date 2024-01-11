@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "taygete"
 description = "A moon of Jupiter in the Carme group"
 dynamic = ["version"]
-dependencies = ["ncolony", "pycus", "jupyterlab", "virtualenvwrapper", "httpx", "ipywidgets"]
+dependencies = ["ncolony", "pycus", "jupyterlab", "virtualenvwrapper", "httpx", "ipywidgets", "pipx"]
 readme = "README.rst"
 authors = [{name = "Moshe Zadka", email = "moshez@zadka.club"}]
 requires-python = ">=3.11"

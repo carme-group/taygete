@@ -49,7 +49,10 @@ def configure_helm_build(
         ["dpkg", "--print-architecture"], capture_output=True, check=True, text=True
     )
     architecture = res.stdout.strip()
-    deb_line = f"deb [arch={architecture} signed-by={os.fspath(keyring)}]  https://baltocdn.com/helm/stable/debian/ all main"
+    deb_line = (
+        f"deb [arch={architecture} signed-by={os.fspath(keyring)}]"
+        " https://baltocdn.com/helm/stable/debian/ all main"
+    )
     deb_file = helm_dir / "helm-stable-debian.list"
     deb_file.write_text(deb_line)
 
@@ -69,6 +72,8 @@ def land_starship(
     content_tar = tarfile.open(fileobj=content_io)
     [starship] = content_tar.getmembers()
     starship_contents = content_tar.extractfile(starship)
+    if starship_contents is None:
+        raise ValueError(url, "did not have a starship binary in it")
     starship_data = starship_contents.read()
     starship_loc = org_root / "venv" / "jupyter" / "bin" / "starship"
     starship_loc.parent.mkdir(exist_ok=True, parents=True)
@@ -111,10 +116,14 @@ def ncolonize_jupyter(org_root: pathlib.Path) -> None:
     )
 
 
-def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
-    with open("/etc/profile.d/add-venv.sh", "w") as fpout:
-        print(f"export PATH={os.fspath(org_root / 'venv' / 'jupyter' / 'bin')}:$PATH", file=fpout)
+def configure_runtime(org_root, run: Callable = subprocess.run) -> None:
+    with open("/etc/profile.d/taygete.sh", "w") as fpout:
+        print(
+            f"export PATH={os.fspath(org_root / 'venv' / 'jupyter' / 'bin')}:$PATH",
+            file=fpout,
+        )
         print("export WORKON_HOME=~/venv", file=fpout)
+        print("cd ~", file=fpout)
     pathlib.Path("/etc/sudoers.d").mkdir(exist_ok=True)
     with open("/etc/sudoers.d/developer", "w") as fpout:
         print("developer            ALL = (ALL) NOPASSWD: ALL", file=fpout)
@@ -148,6 +157,7 @@ def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
             "sudo",
             "docker.io",
             "kubernetes-client",
+            "helm",
         ],
         check=True,
     )
