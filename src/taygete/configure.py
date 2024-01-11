@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import pathlib
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -41,9 +42,9 @@ def configure_helm_build(
         ["gpg", "--dearmor"], input=content, capture_output=True, check=True, text=False
     )
     helm_dir = homedir_jupyter(org_root) / "helm"
-    helm_dir.create(parents=True, exist_ok=True)
+    helm_dir.mkdir(parents=True, exist_ok=True)
     keyring = helm_dir / "helm.gpg"
-    keywrite.write_bytes(res.stdout)
+    keyring.write_bytes(res.stdout)
     res = run(
         ["dpkg", "--print-architecture"], capture_output=True, check=True, text=True
     )
@@ -114,7 +115,8 @@ def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
     with open("/etc/profile.d/add-venv.sh", "w") as fpout:
         print(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}", file=fpout)
         print("export WORKON_HOME=~/venv", file=fpout)
-    with open("/etc/sudoers.d/developer", "a+") as fpout:
+    pathlib.Path("/etc/sudoers.d").mkdir(exist_ok=True)
+    with open("/etc/sudoers.d/developer", "w") as fpout:
         print("developer            ALL = (ALL) NOPASSWD: ALL", file=fpout)
     run(["apt-get", "update"], check=True)
     run(["apt-get", "install", "--yes", "apt-transport-https"], check=True)
