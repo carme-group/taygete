@@ -48,7 +48,7 @@ def configure_helm_build(
     res = run(
         ["dpkg", "--print-architecture"], capture_output=True, check=True, text=True
     )
-    architecture = res.stdout
+    architecture = res.stdout.strip()
     deb_line = f"deb [arch={architecture} signed-by={os.fspath(keyring)}]  https://baltocdn.com/helm/stable/debian/ all main"
     deb_file = helm_dir / "helm-stable-debian.list"
     deb_file.write_text(deb_line)
@@ -113,7 +113,7 @@ def ncolonize_jupyter(org_root: pathlib.Path) -> None:
 
 def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
     with open("/etc/profile.d/add-venv.sh", "w") as fpout:
-        print(f"PATH=$PATH:{os.fspath(org_root / 'venv' / 'jupyter' / '/bin')}", file=fpout)
+        print(f"export PATH={os.fspath(org_root / 'venv' / 'jupyter' / 'bin')}:$PATH", file=fpout)
         print("export WORKON_HOME=~/venv", file=fpout)
     pathlib.Path("/etc/sudoers.d").mkdir(exist_ok=True)
     with open("/etc/sudoers.d/developer", "w") as fpout:
@@ -122,6 +122,7 @@ def configure_runtime(org_root, run: Callable=subprocess.run) -> None:
     run(["apt-get", "install", "--yes", "apt-transport-https"], check=True)
     helm_dir = homedir_jupyter(org_root) / "helm"
     orig_file = helm_dir / "helm-stable-debian.list"
+    run(["cat", os.fspath(orig_file)])
     shutil.copy(orig_file, "/etc/apt/sources.list.d/")
     hdj, kernels = map(
         os.fspath,

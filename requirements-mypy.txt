@@ -68,7 +68,7 @@ filelock==3.13.1
     # via virtualenv
 fqdn==1.5.1
     # via jsonschema
-gather==2024.1.11.4674
+gather==2024.1.11.79239
     # via ncolony
 h11==0.14.0
     # via httpcore
